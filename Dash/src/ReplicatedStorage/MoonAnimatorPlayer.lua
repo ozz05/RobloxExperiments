@@ -2,6 +2,11 @@ local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 
 local moonAnimatorPlayer = {}
+local Properties = {
+    "CFrame",
+    "Size",
+    "Transparency"
+}
 
 local function addValue(keyframe)
     local value = nil
@@ -16,17 +21,36 @@ local function addValue(keyframe)
     end
     return value
 end
+
 local function addKeyFrames(property, keyframesList)
     local keyFrames = {}
     local keyFramesFolders = property:GetChildren()
     if keyFramesFolders then
         for _, keyframe in pairs(keyFramesFolders) do
-            keyFrames[keyframe.Name] = addValue(keyframe)
-            keyframesList[keyframe.Name] = {frame = tonumber(keyframe.Name)}
-
+            if not (keyframe.Name == "default") then
+                keyFrames[tonumber(keyframe.Name)] = addValue(keyframe)
+                keyframesList[tonumber(keyframe.Name)] = {frame = tonumber(keyframe.Name)}
+            end
         end
     end
+    local counter = 0
+    for _, _keyframe in pairs(keyFrames) do
+        counter += 1
+    end
+    if counter == 0 then
+        return nil
+    end
     return keyFrames
+end
+
+local function getAnimationlength(frames)
+    local length = 0
+    for _, frame in pairs(frames) do
+        if frame["frame"] > length then
+            length = frame["frame"]
+        end
+    end
+    return length
 end
 
 local function addProperties(folder, keyframesList)
@@ -35,22 +59,29 @@ local function addProperties(folder, keyframesList)
     if properties then
         for _, property in pairs(properties) do
             meshProperties[property.Name] = addKeyFrames(property, keyframesList)
-            meshProperties[property.Name]["Name"]  = property.Name
         end
     end
     return meshProperties
 end
 
 local function getMeshesProperties(AnimationInfo, AnimationDictionary)
-    AnimationDictionary["Keyframes"] = {}
-    for _, folder in pairs(AnimationInfo:GetChildren()) do
-        AnimationDictionary[folder.Name] = addProperties(folder, AnimationDictionary["Keyframes"])
+    local AnimationKeyFrames = {}
+    local newAnimationDictionary = {}
+    for _index, folder in pairs(AnimationInfo:GetChildren()) do
+        newAnimationDictionary[tonumber(folder.Name)] = addProperties(folder, AnimationKeyFrames)
+        for _, info in pairs(AnimationDictionary) do
+            if info["FolderName"] == tonumber(folder.Name) then
+                newAnimationDictionary[tonumber(folder.Name)]["Name"] = info["Name"]
+            end
+        end
     end
+    newAnimationDictionary["AnimationKeyFrames"] = AnimationKeyFrames
+    return newAnimationDictionary
 end
 
 local function getVFXInfo(dicctionary)
     local items = {}
-    for _key, value in pairs(dicctionary) do
+    for _key, value in ipairs(dicctionary) do
         local pathLenghth = 0
         for _, path in pairs(value["Path"]["InstanceNames"]) do
             pathLenghth += 1
@@ -58,7 +89,7 @@ local function getVFXInfo(dicctionary)
         for i, instanceName in pairs(value["Path"]["InstanceNames"]) do
             if i == pathLenghth then
                 if instanceName then
-                    items[instanceName] = {Name = instanceName}
+                    items[_key] = {Name = instanceName, FolderName = _key}
                 end
             end
         end
@@ -66,10 +97,10 @@ local function getVFXInfo(dicctionary)
     return items
 end
 
-local function play(VFX, dictionary, RootCFrame)
+local function play(VFX:Model, dictionary, RootCFrame)
     local co 
 	co = coroutine.create(function()
-		VFX:SetPrimaryPartCFrame(RootCFrame)
+		VFX:PivotTo(RootCFrame)
 		VFX.Parent = game.Workspace
 		local function FrameToSec(v)
 			return v/60
@@ -77,40 +108,52 @@ local function play(VFX, dictionary, RootCFrame)
 		local function SecToFrame(v)
 			return v*60
 		end
-
-		local meshes = VFX:GetChildren()
-		local frames = dictionary["Keyframes"]
-		local previusFrame 
+		local frames = dictionary["AnimationKeyFrames"]
+		
 		if frames then
-			if meshes then
-				for i,frame in pairs(frames) do
-					local previusFrame = frames[i-1]
-					if not previusFrame  then
-						previusFrame = 0			
-					end
-					local timeframe = FrameToSec(frames[i] - previusFrame)
-					for _,mesh in pairs(meshes) do
-						if dictionary[mesh.Name] then
-							local goal = {}
-							for i,property in pairs(dictionary[mesh.Name]) do
-								if property[tostring(frame)] then
-
-									if typeof(property[tostring(frame)]) == "CFrame" then
-										property[tostring(frame)] = VFX.PrimaryPart.CFrame:ToWorldSpace(property[tostring(frame)])--reference.PrimaryPart.CFrame
-									end
-									goal[property.Name] = property[tostring(frame)]
-								end
-							end
-							local tinfo = TweenInfo.new(timeframe)
-							TweenService:Create(mesh,tinfo, goal):Play()
-
-						end
-					end
-					task.wait(timeframe)
-				end
-
-			end
+            for _, meshPartInfo in pairs(dictionary) do
+                local name = meshPartInfo["Name"]
+                if name then
+                    local mesh = VFX:FindFirstChild(name)
+                    if mesh then
+                        for _, property in (Properties) do
+                            local co2
+                            co2 = coroutine.create(function()
+                                local previusFrame
+                                for i = 0, getAnimationlength(frames), 1 do
+                                    if frames[i] then
+                                        if not previusFrame  then
+                                            previusFrame = 0
+                                        end
+                                        local timeframe = FrameToSec(i - previusFrame)
+                                        local goal = {}
+                                        if meshPartInfo[property] then
+                                            if meshPartInfo[property][i] then
+                                                if property == "CFrame" then
+                                                    if VFX.PrimaryPart then
+                                                        local cframe = CFrame.new(mesh.Position) * VFX.PrimaryPart.CFrame.Rotation
+                                                        goal[property] = cframe:ToWorldSpace(meshPartInfo[property][i].Rotation)
+                                                    end
+                                                else
+                                                    goal[property] = meshPartInfo[property][i]
+                                                end
+                                                local tinfo = TweenInfo.new(timeframe)
+                                                TweenService:Create(mesh,tinfo, goal):Play()
+                                                previusFrame = i
+                                                task.wait(timeframe)
+                                            end
+                                        end
+                                        
+                                    end
+                                end
+                            end)
+                            coroutine.resume(co2)
+                        end
+                    end
+                end
+            end
 		end
+		task.wait(FrameToSec(getAnimationlength(frames)))
 		VFX:Destroy()
 		co = nil
 		coroutine.yield()
@@ -121,32 +164,32 @@ end
 moonAnimatorPlayer.stringToDictionary = function(jsonString: string)
     if jsonString then
         local jsonTable = HttpService:JSONDecode(jsonString)
-        local dictionary = {}
-        for key, value in pairs(jsonTable) do
-            dictionary[key] = value
-        end
-        return dictionary
+        return table.clone(jsonTable)
     end
     return nil
 end
 
 moonAnimatorPlayer.playVFX = function(VFX:Model, rootCFrame)
-    local VFXInfo = VFX:FindFirstChildOfClass("StringValue")
-    if VFXInfo then
-        local dicctionary = moonAnimatorPlayer.stringToDictionary(VFXInfo.Value)
-        if dicctionary then
-            local items = dicctionary["Items"]
-            if items then
-                local vfxInfo = getVFXInfo(items)
-                getMeshesProperties(VFXInfo, vfxInfo)
-                for index, value in pairs(vfxInfo) do
-                    print(value.Name)
-                    print(value.CFrame)
+    local co
+    co = coroutine.create(function()
+        local VFXInfo = VFX:FindFirstChildOfClass("StringValue")
+        if VFXInfo then
+            local dicctionary = moonAnimatorPlayer.stringToDictionary(VFXInfo.Value)
+            if dicctionary then
+                local items = dicctionary["Items"]
+                if items then
+                    local vfxInfo = getVFXInfo(items)
+                    if vfxInfo then
+                        vfxInfo = getMeshesProperties(VFXInfo, vfxInfo)
+                        if vfxInfo then
+                            play(VFX, vfxInfo, rootCFrame)
+                        end
+                    end
                 end
-                --play(VFX, vfxInfo, rootCFrame)
             end
         end
-    end
+    end)
+    coroutine.resume(co)
 end
 
 return moonAnimatorPlayer
