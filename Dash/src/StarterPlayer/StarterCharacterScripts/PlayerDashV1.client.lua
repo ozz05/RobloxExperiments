@@ -15,11 +15,12 @@ if not Character or not Character.Parent then
 	Character = LocalPlayer.CharacterAdded:Wait()
 end
 local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart")
-local Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid")
+local Humanoid:Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid")
 local Animator = Humanoid:FindFirstChild("Animator") or Humanoid:WaitForChild("Animator")
 
 local DASH_COOLDOWN = 2
 local DISTANCE = 20
+local DESTROY_PROXIMITY = 3
 
 local CooldownFrame
 local cooldownGradient
@@ -32,7 +33,9 @@ local dashAnimation_Loop = Instance.new("Animation")
 dashAnimation_Loop.AnimationId = "rbxassetid://13387017473"
 
 -- DashVFX
-local DashVFX = game.Workspace.VFX.DashVFX
+local VFXFolder = ReplicatedStorage:FindFirstChild("VFX") or ReplicatedStorage:WaitForChild("VFX")
+local DashVFX = VFXFolder.DashVFX
+local BlueExplosion = VFXFolder.BlueExplosion
 
 
 local dashStartAnimationTrack = Animator:LoadAnimation(dashAnimation_Start)
@@ -77,19 +80,42 @@ local function handleDashAnimation()
 	until not dashStartAnimationTrack.IsPlaying or (os.clock() - debounce) > dashStartAnimationTrack.Length
 	dashLoopAnimationTrack:Play()
 	dashSound:Play()
-	MoonAnimatorPlayer.playVFX(DashVFX)
 end
 
-local function moveHumanoidRootPart(number, humanoidRootPart)
-	local lookVector = humanoidRootPart.CFrame.lookVector
-	local offset = lookVector * number
-    local origin = HumanoidRootPart.Position
-    local goalPosition = humanoidRootPart.Position + offset
-    local result = workspace:Raycast(origin, offset)
-    if result then
-        goalPosition = result.Position
-    end
-	
+local function applyImpulse(humanoidRootPart:BasePart, targetPosition, travelTrime)
+	local currentPosition = humanoidRootPart.Position
+	local distance = (targetPosition - currentPosition).Magnitude
+	local direction = (targetPosition - currentPosition).Unit
+	local playerVelocity = math.sqrt(humanoidRootPart.AssemblyLinearVelocity:Dot(direction)^2)
+	local gravity = game.Workspace.Gravity
+	local impulseMagnitude = math.sqrt((gravity * 0.5) * distance * humanoidRootPart.AssemblyMass)
+	local impulseForce = direction * impulseMagnitude * humanoidRootPart.AssemblyMass
+	if (Humanoid:GetState() == Enum.HumanoidStateType.Jumping) or (Humanoid:GetState() == Enum.HumanoidStateType.Freefall) then
+		impulseForce = impulseForce * 0.5
+	end
+	humanoidRootPart:ApplyImpulse(impulseForce)
+	handleDashAnimation()
+	task.wait(travelTrime)
+	dashStartAnimationTrack:Stop()
+	dashLoopAnimationTrack:Stop()
+	useTweenServiceForCooldown()
+end
+
+local function applyImpulseToRootPart(humanoidRootPart:BasePart, goalPosition:Vector3, travelTrime)
+	if humanoidRootPart and humanoidRootPart:IsA("BasePart") then
+		local direction = goalPosition - humanoidRootPart.Position
+		local Magnitude = (goalPosition - humanoidRootPart.Position).Magnitude
+		local force = (direction * Magnitude) + Vector3.new(0, 10, 0)
+		humanoidRootPart:ApplyImpulse((force * humanoidRootPart.AssemblyMass))
+		handleDashAnimation()
+		task.wait(travelTrime)
+		dashStartAnimationTrack:Stop()
+		dashLoopAnimationTrack:Stop()
+		useTweenServiceForCooldown()
+	end
+end
+
+local function useAlignPosition(humanoidRootPart, goalPosition)
 	local part = Instance.new("Part")
 	part.Anchored = true
 	part.CanCollide = false
@@ -100,6 +126,7 @@ local function moveHumanoidRootPart(number, humanoidRootPart)
 	
 	local alignPosition = Instance.new("AlignPosition")
 	alignPosition.RigidityEnabled = true
+	alignPosition.ApplyAtCenterOfMass = true
 	alignPosition.Parent = HumanoidRootPart
 	
 	local attachment1 = Instance.new("Attachment")
@@ -116,7 +143,7 @@ local function moveHumanoidRootPart(number, humanoidRootPart)
 	local function checkGoal()
 		local currentPosition = humanoidRootPart.Position
 		local distance = (currentPosition - goalPosition).Magnitude
-		if distance < 1 then
+		if distance < DESTROY_PROXIMITY then
 			alignPosition:Destroy()
 			attachment1:Destroy()
 			attachment2:Destroy()
@@ -128,6 +155,25 @@ local function moveHumanoidRootPart(number, humanoidRootPart)
 		end
 	end
 	connection = RunService.RenderStepped:Connect(checkGoal)
+end
+
+local function moveHumanoidRootPart(distance, humanoidRootPart)
+	local lookVector = humanoidRootPart.CFrame.lookVector
+	local offset = lookVector * distance
+    --local origin = HumanoidRootPart.Position
+    local goalPosition = humanoidRootPart.Position + offset
+    --[[local result = workspace:Raycast(origin, offset)
+    if result then
+        goalPosition = result.Position
+    end--]]
+	local VFXCopy = DashVFX:Clone()
+	MoonAnimatorPlayer.playVFX(VFXCopy, HumanoidRootPart.CFrame)
+
+	local ExplosionVFXCopy = BlueExplosion:Clone()
+	MoonAnimatorPlayer.playVFX(ExplosionVFXCopy, HumanoidRootPart.CFrame)
+	--useAlignPosition(humanoidRootPart, goalPosition)
+	--applyImpulseToRootPart(humanoidRootPart, goalPosition, .5)
+	applyImpulse(humanoidRootPart, goalPosition, .5)
 end
 
 --- handles the activation of the dash
