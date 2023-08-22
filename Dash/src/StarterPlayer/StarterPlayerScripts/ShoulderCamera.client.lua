@@ -106,7 +106,7 @@ local function rotatePlayer()
 	if not HumanoidRootPart or not Humanoid then
 		return
 	end
-    Humanoid.AutoRotate = false
+    Humanoid.AutoRotate = true
 	local HumanoidRootPartPosition = HumanoidRootPart.Position
 	HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPartPosition, HumanoidRootPartPosition + direction)
 end
@@ -186,7 +186,7 @@ local function updateCamera(step)
         UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 		local finalCameraCFrame = CFrame.new(positionSpring.Position) * TargetAnglesCFrame * CAMERA_OFFSET
 		Camera.CFrame = finalCameraCFrame
-		rotatePlayer()
+		--rotatePlayer()
 	end
 end
 
