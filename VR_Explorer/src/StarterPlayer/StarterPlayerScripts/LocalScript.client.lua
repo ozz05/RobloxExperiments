@@ -9,7 +9,7 @@ local function SetTransparency(playerCharacter)
         -- Iterate through the parts of the character
         for _, part in pairs(playerCharacter:GetDescendants()) do
             if (part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture")) and not part:FindFirstAncestorOfClass("Tool") then
-                if part.Name == "RightHand" or part.Name == "LeftHand" or part.Name == "RightHandVR" or part.Name == "LeftHandVR" or part.Name == "RightLowerArm" or part.Name == "LeftLowerArm" then
+                if part.Name == "RightHand" or part.Name == "LeftHand" or part.Name == "RightHandVR" or part.Name == "LeftHandVR" or part.Name == "RightLowerArm" or part.Name == "LeftLowerArm" or part.Name == "RootPartVR" then
                     part.LocalTransparencyModifier = 0
                 else
                     part.LocalTransparencyModifier = 1

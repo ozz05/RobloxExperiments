@@ -30,20 +30,22 @@ local function rotatePlayer()
 	if Humanoid.Sit or not HumanoidRootPart or not Humanoid then
 		return
 	end
-    local direction
+	local direction
 	local camLookVec = Camera.CFrame.LookVector
 	local lookVecX, lookVecZ = camLookVec.X, camLookVec.Z
 	if lookVecX ~= 0 or lookVecZ ~= 0 then
 		direction = Vector3.new(lookVecX, 0, lookVecZ).Unit
 	end
-    Humanoid.AutoRotate = false
-	local HumanoidRootPartPosition = HumanoidRootPart.Position
-	HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPartPosition, HumanoidRootPartPosition + direction)
+	Humanoid.AutoRotate = false
+	local NewCFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + direction)
+	HumanoidRootPart.CFrame = NewCFrame
 end
 
 local function handleVRCamera()
+	Camera.HeadLocked = false
+	Camera.CameraType = Enum.CameraType.Scriptable
 	local HeadCFrame = VRService:GetUserCFrame(Enum.UserCFrame.Head)
-	Camera.CFrame = CFrame.new(Head.CFrame.Position) * CFrame.new(HeadCFrame.Position) * CFrame.Angles(HeadCFrame:ToEulerAnglesXYZ())
+	Camera.CFrame = CFrame.new(Head.Position)  * CFrame.Angles(HeadCFrame:ToEulerAnglesXYZ())
 end
 
 local function updateAngles(input)
@@ -70,8 +72,6 @@ local function handleOtherDeviceCamera()
 	Camera.CFrame = Camera.Focus
 	Camera.CFrame *= CFrame.fromEulerAnglesYXZ(yRot, xRot, 0) * CFrame.new(0, 0, distance)
 end
-
-
 
 local function handleRenderStepped()
 	if VRService.VREnabled == true then
@@ -103,6 +103,7 @@ end
 local function handleInputChanged(input)
 	updateAngles(input)
 end
+
 
 UserInputService.InputBegan:Connect(handleInputBegan)
 UserInputService.InputEnded:Connect(handleInputEnded)

@@ -11,9 +11,8 @@ local Camera = game.Workspace.CurrentCamera
 local HeadScale = 1
 local RightHandVR = Character:FindFirstChild("RightHandVR") or Character:WaitForChild("RightHandVR")
 local LeftHandVR = Character:FindFirstChild("LeftHandVR") or Character:WaitForChild("LeftHandVR")
-
-local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head")
-
+local RootPartVR = Character:FindFirstChild("RootPartVR") or Character:WaitForChild("RootPartVR")
+--local CameraVR = Character:FindFirstChild("CameraVR") or Character:WaitForChild("CameraVR")
 
 
 local function AddIKControls (character:Model)
@@ -46,8 +45,6 @@ local function AddIKControls (character:Model)
 end
 
 
-
-
 local function handleUserCFrameChanged(_type, _newCFrame)
     local RightHandCFrame = VRService:GetUserCFrame(Enum.UserCFrame.RightHand)
     local LeftHandCFrame = VRService:GetUserCFrame(Enum.UserCFrame.LeftHand)
@@ -65,6 +62,8 @@ local function handleUserCFrameChanged(_type, _newCFrame)
     local RRotatedCFrame = CFrame.Angles(math.rad(90), 0, 0)
     RightHandVR.CFrame = RightHandMathfied:ToWorldSpace(RRotatedCFrame)
     LeftHandVR.CFrame = LeftHandMathfied:ToWorldSpace(LRotatedCFrame)
+    RootPartVR.CFrame = Character.HumanoidRootPart.CFrame
+    --CameraVR.CFrame = Camera.CFrame:ToWorldSpace(CFrame.new(0, 0, -2))
 end
 
 

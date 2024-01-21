@@ -44,22 +44,6 @@ local FireButtonInputEndedConnection = nil
 local renderStepped
 
 
-
-local function rotatePlayer()
-	if Humanoid.Sit or not HumanoidRootPart or not Humanoid then
-		return
-	end
-    local direction
-	local camLookVec = Camera.CFrame.LookVector
-	local lookVecX, lookVecZ = camLookVec.X, camLookVec.Z
-	if lookVecX ~= 0 or lookVecZ ~= 0 then
-		direction = Vector3.new(lookVecX, 0, lookVecZ).Unit
-	end
-    Humanoid.AutoRotate = false
-	local HumanoidRootPartPosition = HumanoidRootPart.Position
-	HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPartPosition, HumanoidRootPartPosition + direction)
-end
-
 local function activateCrossHair(status:boolean)
     local playerGui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 2)
     if playerGui then
@@ -165,9 +149,7 @@ end--]]
 
 local function weaponAdded()
     cleanConnection()
-    rotationRenderSteppedConnection = RunService.RenderStepped:Connect(function(_deltaTime)
-        rotatePlayer()
-    end)
+    
     --activateMobileControls()
     activateCrossHair(true)
     UserInputService.MouseIconEnabled = false
