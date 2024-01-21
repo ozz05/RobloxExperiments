@@ -2,7 +2,11 @@
     "ClassName":"Folder",
     "Children":[
         {
-            "Name": "Exmaple_Bindable",
+            "Name": "NotifyOnDamage",
+            "ClassName":"BindableEvent"
+        },
+        {
+            "Name": "FireWeaponBindable",
             "ClassName":"BindableEvent"
         }
     ]

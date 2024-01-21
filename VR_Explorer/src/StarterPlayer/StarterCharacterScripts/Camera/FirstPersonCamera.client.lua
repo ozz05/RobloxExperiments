@@ -11,18 +11,20 @@ local distance = 0.5
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head")
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
 
 local Camera = workspace.CurrentCamera
-Camera.CameraSubject = script.Parent:WaitForChild("Head")
-local camX,camY,camZ = Camera.CFrame:ToEulerAnglesXYZ()
+Camera.CameraSubject = Head
 Camera.CameraType = Enum.CameraType.Scriptable
+local X_LIMIT = Camera.ViewportSize.X/3
 
 local xRot = 0
 local yRot = 0
 
-local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head")
-local Humanoid = Character:WaitForChild("Humanoid")
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
 
 local function rotatePlayer()
 	if Humanoid.Sit or not HumanoidRootPart or not Humanoid then
@@ -45,6 +47,11 @@ local function handleVRCamera()
 end
 
 local function updateAngles(input)
+	if input.UserInputType == Enum.UserInputType.Touch then
+		if input.Position.X < X_LIMIT then
+			return
+		end
+	end
 	local delta = input.Delta
 	local sensitivity = UserGameSettings.MouseSensitivity
 	if UserInputService.GamepadEnabled then
