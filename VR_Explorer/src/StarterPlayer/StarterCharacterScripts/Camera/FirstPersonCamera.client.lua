@@ -5,10 +5,8 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local RunService = game:GetService("RunService")
 local VRService = game:GetService("VRService")
 local Players = game:GetService("Players")
-local mobileDragging
-local dragging
-local distance = 0.5
 
+local distance = 0.5
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Head = Character:FindFirstChild("Head") or Character:WaitForChild("Head")
@@ -41,9 +39,23 @@ local function rotatePlayer()
 	HumanoidRootPart.CFrame = NewCFrame
 end
 
+local function rotatePlayerVR()
+	if Humanoid.Sit or not HumanoidRootPart or not Humanoid then
+		return
+	end
+	local direction
+	local camLookVec = Camera:GetRenderCFrame().LookVector
+	local lookVecX, lookVecZ = camLookVec.X, camLookVec.Z
+	if lookVecX ~= 0 or lookVecZ ~= 0 then
+		direction = Vector3.new(lookVecX, 0, lookVecZ).Unit
+	end
+	Humanoid.AutoRotate = false
+	local NewCFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + direction)
+	HumanoidRootPart.CFrame = NewCFrame
+end
+
 local function handleVRCamera()
-	Camera.HeadLocked = false
-	Camera.CameraType = Enum.CameraType.Scriptable
+	--Camera.HeadLocked = false
 	local HeadCFrame = VRService:GetUserCFrame(Enum.UserCFrame.Head)
 	Camera.CFrame = CFrame.new(Head.Position)  * CFrame.Angles(HeadCFrame:ToEulerAnglesXYZ())
 end
@@ -74,15 +86,17 @@ local function handleOtherDeviceCamera()
 end
 
 local function handleRenderStepped()
+	Camera.CameraType = Enum.CameraType.Scriptable
 	if VRService.VREnabled == true then
 		handleVRCamera()
 	else
 		handleOtherDeviceCamera()
+		rotatePlayer()
 	end
-	rotatePlayer()
+	
 end
 
-local function handleInputBegan(input)
+--[[local function handleInputBegan(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton2 then
 		dragging = true
 	end
@@ -98,14 +112,14 @@ local function handleInputEnded(input)
 	if input.UserInputType == Enum.UserInputType.Touch then
 		mobileDragging = false
 	end
-end
+end--]]
 
 local function handleInputChanged(input)
 	updateAngles(input)
 end
 
 
-UserInputService.InputBegan:Connect(handleInputBegan)
-UserInputService.InputEnded:Connect(handleInputEnded)
+--UserInputService.InputBegan:Connect(handleInputBegan)
+--UserInputService.InputEnded:Connect(handleInputEnded)
 UserInputService.InputChanged:Connect(handleInputChanged)
 RunService:BindToRenderStep("Camera",0, handleRenderStepped)

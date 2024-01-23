@@ -7,11 +7,11 @@ Players.PlayerAdded:Connect(function(player)
         local RightHandVR = VRCharacter.RightHandVR:Clone()
         local LeftHandVR = VRCharacter.LeftHandVR:Clone()
         local RootPartVR = VRCharacter.RootPartVR:Clone()
-        --local CameraVR = VRCharacter.CameraVR:Clone()
+        local CameraVR = VRCharacter.CameraVR:Clone()
 
         RightHandVR.Parent = character
         LeftHandVR.Parent = character
         RootPartVR.Parent = character
-        --CameraVR.Parent = character
+        CameraVR.Parent = character
     end)
 end)

@@ -12,7 +12,7 @@ local HeadScale = 1
 local RightHandVR = Character:FindFirstChild("RightHandVR") or Character:WaitForChild("RightHandVR")
 local LeftHandVR = Character:FindFirstChild("LeftHandVR") or Character:WaitForChild("LeftHandVR")
 local RootPartVR = Character:FindFirstChild("RootPartVR") or Character:WaitForChild("RootPartVR")
---local CameraVR = Character:FindFirstChild("CameraVR") or Character:WaitForChild("CameraVR")
+local CameraVR = Character:FindFirstChild("CameraVR") or Character:WaitForChild("CameraVR")
 
 
 local function AddIKControls (character:Model)
@@ -63,7 +63,7 @@ local function handleUserCFrameChanged(_type, _newCFrame)
     RightHandVR.CFrame = RightHandMathfied:ToWorldSpace(RRotatedCFrame)
     LeftHandVR.CFrame = LeftHandMathfied:ToWorldSpace(LRotatedCFrame)
     RootPartVR.CFrame = Character.HumanoidRootPart.CFrame
-    --CameraVR.CFrame = Camera.CFrame:ToWorldSpace(CFrame.new(0, 0, -2))
+    CameraVR.CFrame = Camera:GetRenderCFrame():ToWorldSpace(CFrame.new(0, 0, -2))
 end
 
 
@@ -79,6 +79,7 @@ if VRService.VREnabled == true then
     StarterGui:SetCore("VREnableControllerModels", false)
     VRService:RecenterUserHeadCFrame()
     Camera.HeadScale = HeadScale
+    VRService.AutomaticScaling = Enum.VRScaling.World
     AddIKControls(Character)
     --VRService.UserCFrameChanged:Connect(handleUserCFrameChanged)
     --- Camera --
