@@ -4,6 +4,10 @@
         {
             "Name": "FireWeapon",
             "ClassName":"RemoteEvent"
+        },
+        {
+            "Name": "UpdateOrientation",
+            "ClassName":"RemoteEvent"
         }
     ]
 }
