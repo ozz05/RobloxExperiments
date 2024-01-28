@@ -6,7 +6,7 @@
             "ClassName":"RemoteEvent"
         },
         {
-            "Name": "UpdateOrientation",
+            "Name": "VRInputHandler",
             "ClassName":"RemoteEvent"
         }
     ]

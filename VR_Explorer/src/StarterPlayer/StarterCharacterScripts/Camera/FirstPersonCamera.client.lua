@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local VRService = game:GetService("VRService")
 local Players = game:GetService("Players")
 
+
+
 local distance = 0.5
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -37,21 +39,7 @@ local function rotatePlayer()
 	Humanoid.AutoRotate = false
 	local NewCFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + direction)
 	HumanoidRootPart.CFrame = NewCFrame
-end
-
-local function rotatePlayerVR()
-	if Humanoid.Sit or not HumanoidRootPart or not Humanoid then
-		return
-	end
-	local direction
-	local camLookVec = Camera:GetRenderCFrame().LookVector
-	local lookVecX, lookVecZ = camLookVec.X, camLookVec.Z
-	if lookVecX ~= 0 or lookVecZ ~= 0 then
-		direction = Vector3.new(lookVecX, 0, lookVecZ).Unit
-	end
-	Humanoid.AutoRotate = false
-	local NewCFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + direction)
-	HumanoidRootPart.CFrame = NewCFrame
+	--VRInputHandlerRemote:FireServer(NewCFrame)
 end
 
 local function handleVRCamera()
@@ -78,7 +66,7 @@ local function updateAngles(input)
 	yRot += math.rad((delta.Y * 0.25) * sensitivity * -1)
 end
 
-local function handleOtherDeviceCamera()
+local function handleOtherDevicesCamera()
 	yRot = math.clamp(yRot, math.rad(-75), math.rad(75))
 	Camera.Focus = CFrame.new(Camera.CameraSubject.Position)
 	Camera.CFrame = Camera.Focus
@@ -90,7 +78,7 @@ local function handleRenderStepped()
 	if VRService.VREnabled == true then
 		handleVRCamera()
 	else
-		handleOtherDeviceCamera()
+		handleOtherDevicesCamera()
 		rotatePlayer()
 	end
 	
@@ -117,7 +105,6 @@ end--]]
 local function handleInputChanged(input)
 	updateAngles(input)
 end
-
 
 --UserInputService.InputBegan:Connect(handleInputBegan)
 --UserInputService.InputEnded:Connect(handleInputEnded)

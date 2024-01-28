@@ -3,85 +3,81 @@ local RunService = game:GetService("RunService")
 local VRService = game:GetService("VRService")
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RemoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents") or ReplicatedStorage:WaitForChild("RemoteEvents")
+local VRInputHandlerRemote = RemoteEvents:FindFirstChild("VRInputHandler") or RemoteEvents:WaitForChild("VRInputHandler")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Camera = game.Workspace.CurrentCamera
-local HeadScale = 1
-local RightHandVR = Character:FindFirstChild("RightHandVR") or Character:WaitForChild("RightHandVR")
-local LeftHandVR = Character:FindFirstChild("LeftHandVR") or Character:WaitForChild("LeftHandVR")
-local RootPartVR = Character:FindFirstChild("RootPartVR") or Character:WaitForChild("RootPartVR")
-local CameraVR = Character:FindFirstChild("CameraVR") or Character:WaitForChild("CameraVR")
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local HeadScale = Camera.HeadScale
+local RightHandVR
+local LeftHandVR
+local CameraVR
 
+local debounceTime = 0.3  -- Set the debounce time in seconds
+local lastUpdateTime = 0
 
-local function AddIKControls (character:Model)
-    local rightHand:Instance = character:FindFirstChild("RightHand")
-    local RightUpperArm = character:FindFirstChild("RightUpperArm")
-    if rightHand and RightUpperArm then
-        local rightHandikController = Instance.new("IKControl")
-        rightHandikController.Name = "rightHandikController"
-        rightHandikController.Weight = 1
-        rightHandikController.SmoothTime = 0.05
-        rightHandikController.Parent = RightHandVR
-        
-        rightHandikController.EndEffector = rightHand
-        rightHandikController.ChainRoot = RightUpperArm
-        rightHandikController.Target = RightHandVR
-    end
-    
-    local leftHand:Instance = character:FindFirstChild("LeftHand")
-    local LeftUpperArm = character:FindFirstChild("LeftUpperArm")
-    if leftHand and LeftUpperArm then
-        local leftHandikController = Instance.new("IKControl")
-        leftHandikController.Name = "leftHandikController"
-        leftHandikController.Weight = 1
-        leftHandikController.SmoothTime = 0.05
-        leftHandikController.Parent = LeftHandVR
-        leftHandikController.EndEffector = leftHand
-        leftHandikController.ChainRoot = LeftUpperArm
-        leftHandikController.Target = LeftHandVR
-    end
+local function rotatePlayerVR()
+	if Humanoid.Sit or not HumanoidRootPart or not Humanoid then
+		return
+	end
+
+	local direction
+	local camLookVec = Camera:GetRenderCFrame().LookVector
+	local lookVecX, lookVecZ = camLookVec.X, camLookVec.Z
+
+	if lookVecX ~= 0 or lookVecZ ~= 0 then
+		direction = Vector3.new(lookVecX, 0, lookVecZ).Unit
+	end
+	
+	Humanoid.AutoRotate = false
+	local NewCFrame = CFrame.new(HumanoidRootPart.Position, HumanoidRootPart.Position + direction)
+	return NewCFrame
 end
 
-
-local function handleUserCFrameChanged(_type, _newCFrame)
+local function displayPlayerMovement(params)
     local RightHandCFrame = VRService:GetUserCFrame(Enum.UserCFrame.RightHand)
     local LeftHandCFrame = VRService:GetUserCFrame(Enum.UserCFrame.LeftHand)
-    local HeadCFrame = VRService:GetUserCFrame(Enum.UserCFrame.Head)
 
-    local RightHandMathfied = 
-        CFrame.new(Camera.CFrame.Position) * CFrame.new((RightHandCFrame.Position - HeadCFrame.Position) 
-        * HeadScale) * CFrame.fromEulerAnglesXYZ(RightHandCFrame:ToEulerAnglesXYZ())
-
-    local LeftHandMathfied = 
-        CFrame.new(Camera.CFrame.Position) * CFrame.new((LeftHandCFrame.Position - HeadCFrame.Position) 
-        * HeadScale) * CFrame.fromEulerAnglesXYZ(LeftHandCFrame:ToEulerAnglesXYZ())
-    
+    local RightHandMathfied = Camera.CFrame * RightHandCFrame
+    local LeftHandMathfied = Camera.CFrame * LeftHandCFrame
     local LRotatedCFrame = CFrame.Angles(math.rad(90), 0, 0)
     local RRotatedCFrame = CFrame.Angles(math.rad(90), 0, 0)
-    RightHandVR.CFrame = RightHandMathfied:ToWorldSpace(RRotatedCFrame)
-    LeftHandVR.CFrame = LeftHandMathfied:ToWorldSpace(LRotatedCFrame)
-    RootPartVR.CFrame = Character.HumanoidRootPart.CFrame
-    CameraVR.CFrame = Camera:GetRenderCFrame():ToWorldSpace(CFrame.new(0, 0, -2))
+
+    params.RightHandVR = RightHandMathfied:ToWorldSpace(RRotatedCFrame)
+    params.LeftHandVR = LeftHandMathfied:ToWorldSpace(LRotatedCFrame)
+    params.CameraVR = Camera:GetRenderCFrame()
 end
 
 
 local function handleRenderStepped(_deltaTime)
-    handleUserCFrameChanged()
+    
+end
+
+local function handleUserCFrameChanged(_type, _newCFrame)
+    local params = {}
+    displayPlayerMovement(params)
+    params.HumanoidOrientation = rotatePlayerVR()
+    VRInputHandlerRemote:FireServer("UPDATE", params)
 end
 
 if VRService.VREnabled == true then
-    Camera.CameraType = Enum.CameraType.Scriptable;
+    VRInputHandlerRemote:FireServer("ADD_VR_CONTROLS")
+    RightHandVR = Character:FindFirstChild("RightHandVR") or Character:WaitForChild("RightHandVR")
+    LeftHandVR = Character:FindFirstChild("LeftHandVR") or Character:WaitForChild("LeftHandVR")
+    CameraVR = Character:FindFirstChild("CameraVR") or Character:WaitForChild("CameraVR")
     -- This disables the laser pointers that the vr controllers have
     StarterGui:SetCore("VRLaserPointerMode", 0)
     -- Not sure what controller models are
-    StarterGui:SetCore("VREnableControllerModels", false)
+    StarterGui:SetCore("VREnableControllerModels", true)
     VRService:RecenterUserHeadCFrame()
     Camera.HeadScale = HeadScale
     VRService.AutomaticScaling = Enum.VRScaling.World
-    AddIKControls(Character)
-    --VRService.UserCFrameChanged:Connect(handleUserCFrameChanged)
+    VRService.UserCFrameChanged:Connect(handleUserCFrameChanged)
     --- Camera --
     RunService.RenderStepped:Connect(handleRenderStepped)
 end
