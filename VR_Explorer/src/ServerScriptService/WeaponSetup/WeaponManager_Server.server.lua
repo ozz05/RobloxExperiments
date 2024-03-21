@@ -170,7 +170,10 @@ end
 
 -- Listen for existing tags, tag additions and tag removals for the kit tag
 for _, inst in pairs(CollectionService:GetTagged(Weapon.TAG_NAME)) do
-	onWeaponAdded(inst)
+    if inst:IsDescendantOf(game.Workspace) then
+        onWeaponAdded(inst)
+    end
+	
 end
 
 FireWeaponBindable.Event:Connect(handleFireWeaponBindable)

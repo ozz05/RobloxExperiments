@@ -68,7 +68,7 @@ end
 
 local function handleOtherDevicesCamera()
 	yRot = math.clamp(yRot, math.rad(-75), math.rad(75))
-	Camera.Focus = CFrame.new(Camera.CameraSubject.Position)
+	Camera.Focus = CFrame.new(Head.Position)
 	Camera.CFrame = Camera.Focus
 	Camera.CFrame *= CFrame.fromEulerAnglesYXZ(yRot, xRot, 0) * CFrame.new(0, 0, distance)
 end

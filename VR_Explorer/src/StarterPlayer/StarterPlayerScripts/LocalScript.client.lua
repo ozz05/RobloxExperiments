@@ -11,8 +11,14 @@ local function SetTransparency(playerCharacter)
             if (part:IsA("BasePart") or part:IsA("Decal") or part:IsA("Texture")) and not part:FindFirstAncestorOfClass("Tool") then
                 if part.Name == "RightHand" or part.Name == "LeftHand" or part.Name == "RightHandVR" or part.Name == "LeftHandVR" or part.Name == "UpperTorso" or part.Name == "Head" or part.Name == "CameraVR" then
                     part.LocalTransparencyModifier = 0.5
+                    
                 else
                     part.LocalTransparencyModifier = 1
+                    part.Changed:Connect(function(property)
+                        if property == "LocalTransparencyModifier" then
+                            part.LocalTransparencyModifier = 1
+                        end
+                    end)
                 end
             end
         end
