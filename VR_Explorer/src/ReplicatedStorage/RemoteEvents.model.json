@@ -8,6 +8,10 @@
         {
             "Name": "VRInputHandler",
             "ClassName":"RemoteEvent"
+        },
+        {
+            "Name": "HoverboardControls",
+            "ClassName":"RemoteEvent"
         }
     ]
 }

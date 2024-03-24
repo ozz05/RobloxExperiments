@@ -1,16 +1,30 @@
--- Services
+---- Services
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+
+
+local RemoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents") or ReplicatedStorage:WaitForChild("RemoteEvents")
+local HoverboardControlsRE = RemoteEvents:FindFirstChild("HoverboardControls") or RemoteEvents:WaitForChild("HoverboardControls")
+
 local Hoverboard = {}
 Hoverboard.__index = Hoverboard
 Hoverboard.TAG_NAME = "Hoverboard"
 Hoverboard.DEFAULT_ANIM = "rbxassetid://9818938435"
-Hoverboard.HOVER_HEIGH = 3
+Hoverboard.HOVER_HEIGH = 2
+
+--- Speed Values
 Hoverboard.REGULAR_SPEED = 50
+Hoverboard.TURBO_BOOST_SPEED = Hoverboard.REGULAR_SPEED * 2
+Hoverboard.TURBO_BOOST_MULTIPLIER = 2
 Hoverboard.TURBO_BOOST_TIME = 3
-Hoverboard.TURBO_BOOST = 2
+
+Hoverboard.JUMP_HEIGH = 2
 Hoverboard.TURNING_SPEED = 2
-Hoverboard.RAYCAST_LENGHT = Hoverboard.HOVER_HEIGH + 5
+Hoverboard.RAYCAST_LENGHT = Hoverboard.HOVER_HEIGH + 2
+
+Hoverboard.DISABLE_COOLDOWN = 0.5
+
 local hoverboards = {}
 
 local hoverboardAddedSignal = CollectionService:GetInstanceAddedSignal(Hoverboard.TAG_NAME)
@@ -21,11 +35,23 @@ function Hoverboard.new(hoverboard:Model)
     setmetatable(self, Hoverboard)
     self.Hoverboard = hoverboard
     self.PrimaryPart = hoverboard.PrimaryPart
+    self.LastActiveTime = os.clock()
+    --Hoverboard states
+    self.IsActive = true
+    self.IsBoostActive = false
+    self.IsJumping = false
+    self.IsOnAir = false
     
-    self.Active = true
     self.AnimTrack = nil
+
+    --- Hoverboard speed controllers
     self.Acceleration = 0
-    self.Turbo = false
+    self.BoostMultiplier = 1
+    self.TopSpeed = Hoverboard.REGULAR_SPEED
+    
+    --- Hoverboard Action Control
+    self.HoverboardHeight = Hoverboard.HOVER_HEIGH
+
     self.SettingsFolder = hoverboard:FindFirstChild("Settings") or hoverboard:WaitForChild("Settings", 2)
     if self.SettingsFolder then
         local AttachmentValue = self.SettingsFolder:FindFirstChild("Attachment") or self.SettingsFolder:WaitForChild("Attachment")
@@ -85,29 +111,54 @@ function Hoverboard.new(hoverboard:Model)
 end
 
 function Hoverboard:UpdateAlignOrientation(_deltaTime)
-    if self.Active then
+    if self.IsActive then
         local rotatedCFrame = CFrame.Angles(0, math.rad(- self.Seat.SteerFloat * Hoverboard.TURNING_SPEED), 0)
         self.AlignOrientation.CFrame = self.AlignOrientation.CFrame:ToWorldSpace(rotatedCFrame)
     end
 end
 
-
+function Hoverboard:UpdateHoverboardHeight()
+    if self.IsJumping then
+        
+    end
+end
 function Hoverboard:UpdateAlignPosition(_deltaTime)
-    if self.Active then
+    if self.IsActive then
         local rayDirection  = Vector3.new(0, - Hoverboard.RAYCAST_LENGHT, 0)
         local raycastResult = workspace:Raycast(self.PrimaryPart.CFrame.Position, rayDirection, self.raycastParams)
         if raycastResult then
+            self.IsOnAir = false
             self.AlignPosition.Enabled = true
-            self.AlignPosition.Position = raycastResult.Position + Vector3.new(self.Seat.ThrottleFloat, Hoverboard.HOVER_HEIGH)
+            self:UpdateHoverboardHeight()
+            self.AlignPosition.Position = raycastResult.Position + Vector3.new(self.Seat.ThrottleFloat, self.HoverboardHeight)
         else
+            self.IsOnAir = true
             self.AlignPosition.Enabled = false
         end
     end
 end
-
+function Hoverboard:UpdateTopSpeed()
+    if self.IsBoostActive then
+        self.TopSpeed = Hoverboard.TURBO_BOOST_SPEED
+        self.BoostMultiplier = Hoverboard.TURBO_BOOST_MULTIPLIER
+    else
+        self.BoostMultiplier = 1
+        self.TopSpeed = Hoverboard.REGULAR_SPEED
+    end
+end
+function Hoverboard:UpdateAcceleration()
+    if (self.Acceleration > -self.TopSpeed) and (self.Acceleration < self.TopSpeed) then
+        self.Acceleration += self.Seat.ThrottleFloat * self.BoostMultiplier
+    else
+        self.Acceleration += -self.Seat.ThrottleFloat
+    end
+end
 function Hoverboard:UpdateLinearVelocity(_deltaTime)
-    if self.Active then
+    if self.IsActive then
         if not self.Seat.Occupant then
+            if (os.clock() - self.LastActiveTime) > Hoverboard.DISABLE_COOLDOWN then
+                self.LinearVelocity.Enabled = false
+            end
             return
         end
         local rootPart = self.Seat.Occupant.Parent:FindFirstChild("HumanoidRootPart")
@@ -119,15 +170,10 @@ function Hoverboard:UpdateLinearVelocity(_deltaTime)
         if self.Seat.ThrottleFloat == 0 then
             self.Acceleration = 0
         end
-        if self.Acceleration > -Hoverboard.REGULAR_SPEED and self.Acceleration < Hoverboard.REGULAR_SPEED then
-            self.Acceleration += self.Seat.ThrottleFloat
-        end
-        if self.Turbo then
-            self.LinearVelocity.VectorVelocity = Vector3.new(rightVector.X * self.Acceleration, rightVector.Y, rightVector.Z * self.Acceleration) * Hoverboard.TURBO_BOOST
-        else
-            self.LinearVelocity.VectorVelocity = Vector3.new(rightVector.X * self.Acceleration, rightVector.Y, rightVector.Z * self.Acceleration)
-        end
-        
+        self:UpdateTopSpeed()
+        self:UpdateAcceleration()
+        self.LinearVelocity.VectorVelocity = Vector3.new(rightVector.X * self.Acceleration, rightVector.Y, rightVector.Z * self.Acceleration)
+        self.LastActiveTime = os.clock()
     else
         self.LinearVelocity.Enabled = false
     end
@@ -152,6 +198,9 @@ function Hoverboard:OnOccupantChanged()
     self:PlayAnimation(self.Seat.Occupant)
 end
 
+function Hoverboard:Boost(active:boolean)
+    self.IsBoostActive = active
+end
 function Hoverboard:Cleanup()
 	print("Here")
 end
@@ -169,6 +218,13 @@ local function onHoverboardRemoved(hoverboard)
     end
 end
 
+local function handleHoverboardControlsRE(player:Player, action:string, params)
+    if hoverboards[params.Hoverboard] then
+        if action == "BOOST" then
+            hoverboards[params.Hoverboard]:Boost(params.IsActive)
+        end
+    end
+end
 for _, hoverboard in pairs(CollectionService:GetTagged(Hoverboard.TAG_NAME)) do
     if hoverboard:IsDescendantOf(game.Workspace) then
         onHoverboardAdded(hoverboard)
@@ -177,3 +233,4 @@ end
 
 hoverboardAddedSignal:Connect(onHoverboardAdded)
 hoverboardRemovedSignal:Connect(onHoverboardRemoved)
+HoverboardControlsRE.OnServerEvent:Connect(handleHoverboardControlsRE)
